@@ -164,6 +164,9 @@ _zsh_nvm_revert() {
 }
 
 autoload -U add-zsh-hook
+typeset -g _ZSH_NVM_AUTO_USE_LAST_NVMRC_PATH=""
+typeset -g _ZSH_NVM_AUTO_USE_LAST_NVMRC_VALUE=""
+typeset -g _ZSH_NVM_AUTO_USE_LAST_RESOLVED_VERSION=""
 _zsh_nvm_auto_use() {
   _zsh_nvm_has nvm_find_nvmrc || return
 
@@ -171,10 +174,18 @@ _zsh_nvm_auto_use() {
   local nvmrc_path="$(nvm_find_nvmrc)"
 
   if [[ -n "$nvmrc_path" ]]; then
-    local nvmrc_node_version="$(nvm version $(cat "$nvmrc_path"))"
+    local nvmrc_value="$(<"$nvmrc_path")"
+    local nvmrc_node_version="$_ZSH_NVM_AUTO_USE_LAST_RESOLVED_VERSION"
+
+    if [[ "$nvmrc_path" != "$_ZSH_NVM_AUTO_USE_LAST_NVMRC_PATH" ]] || [[ "$nvmrc_value" != "$_ZSH_NVM_AUTO_USE_LAST_NVMRC_VALUE" ]]; then
+      nvmrc_node_version="$(nvm version "$nvmrc_value")"
+      _ZSH_NVM_AUTO_USE_LAST_NVMRC_PATH="$nvmrc_path"
+      _ZSH_NVM_AUTO_USE_LAST_NVMRC_VALUE="$nvmrc_value"
+      _ZSH_NVM_AUTO_USE_LAST_RESOLVED_VERSION="$nvmrc_node_version"
+    fi
 
     if [[ "$nvmrc_node_version" = "N/A" ]]; then
-      nvm install && export NVM_AUTO_USE_ACTIVE=true
+      nvm install && export NVM_AUTO_USE_ACTIVE=true && _ZSH_NVM_AUTO_USE_LAST_RESOLVED_VERSION="$(nvm version "$nvmrc_value")"
     elif [[ "$nvmrc_node_version" != "$node_version" ]]; then
       nvm use && export NVM_AUTO_USE_ACTIVE=true
     fi
